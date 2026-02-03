@@ -179,7 +179,20 @@ function formatTranscriptionResponse(
   transcriptionResponse: any,
   modelName: string
 ): TranscriptionResponse {
+  // Check for SDK-level errors first
+  if (transcriptionResponse.error) {
+    const error = transcriptionResponse.error;
+    throw new Error(
+      `Deepgram API error: ${error.message || JSON.stringify(error)}`
+    );
+  }
+
   const transcription = transcriptionResponse.result;
+
+  if (!transcription) {
+    throw new Error("No result returned from Deepgram");
+  }
+
   const result = transcription?.results?.channels?.[0]?.alternatives?.[0];
 
   if (!result) {
@@ -288,9 +301,6 @@ async function handleTranscription(req: Request): Promise<Response> {
 
     // Send transcription request to Deepgram
     const transcriptionResponse = await transcribeAudio(dgRequest, model);
-
-    // Debug logging
-    console.log("Deepgram response structure:", JSON.stringify(transcriptionResponse, null, 2));
 
     // Format and return response
     const response = formatTranscriptionResponse(transcriptionResponse, model);
