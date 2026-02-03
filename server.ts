@@ -16,6 +16,7 @@
 import { createClient } from "@deepgram/sdk";
 import { load } from "dotenv";
 import TOML from "npm:@iarna/toml@2.2.5";
+import { Buffer } from "node:buffer";
 
 // Load environment variables
 await load({ export: true });
@@ -84,7 +85,7 @@ const deepgram = createClient(apiKey);
 
 interface TranscriptionRequest {
   url?: string;
-  buffer?: Uint8Array;
+  buffer?: Buffer;
   mimetype?: string;
 }
 
@@ -159,15 +160,7 @@ async function transcribeAudio(
 
   // File transcription
   if (dgRequest.buffer) {
-    // Try using fileBlob if available, otherwise fall back to buffer
-    const fileData = (dgRequest as any).fileBlob || dgRequest.buffer;
-    console.log("Calling Deepgram transcribeFile with:", {
-      dataType: fileData.constructor.name,
-      size: dgRequest.buffer.length,
-      mimetype: dgRequest.mimetype
-    });
-
-    return await deepgram.listen.prerecorded.transcribeFile(fileData as any, {
+    return await deepgram.listen.prerecorded.transcribeFile(dgRequest.buffer, {
       model,
       mimetype: dgRequest.mimetype,
     });
@@ -288,13 +281,9 @@ async function handleTranscription(req: Request): Promise<Response> {
     // If file provided, read it into buffer
     if (file) {
       const arrayBuffer = await file.arrayBuffer();
-      // Create a Blob instead of Uint8Array for better SDK compatibility
-      const blob = new Blob([arrayBuffer], { type: dgRequest.mimetype || file.type });
-      dgRequest.buffer = new Uint8Array(arrayBuffer);
+      // Convert to Node.js Buffer for SDK compatibility
+      dgRequest.buffer = Buffer.from(arrayBuffer);
       console.log(`File read successfully: ${file.name}, buffer size: ${dgRequest.buffer.length} bytes, mimetype: ${dgRequest.mimetype}`);
-
-      // Store blob for SDK call
-      (dgRequest as any).fileBlob = blob;
     }
 
     // Send transcription request to Deepgram
