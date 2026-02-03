@@ -1,7 +1,7 @@
 # Deno Transcription Makefile
 # Framework-agnostic commands for managing the project and git submodules
 
-.PHONY: help check-prereqs init install build start start-backend start-frontend clean status update
+.PHONY: help check check-prereqs install init build start start-backend start-frontend clean status update
 
 # Default target: show help
 help:
@@ -24,15 +24,18 @@ help:
 	@echo "  make status         Show git and submodule status"
 	@echo ""
 
-# Check prerequisites
-check-prereqs:
+# Check prerequisites (matches [check] in deepgram.toml)
+check:
 	@command -v git >/dev/null 2>&1 || { echo "❌ git is required but not installed. Visit https://git-scm.com"; exit 1; }
 	@command -v deno >/dev/null 2>&1 || { echo "❌ deno is required but not installed. Visit https://deno.land"; exit 1; }
 	@command -v pnpm >/dev/null 2>&1 || { echo "⚠️  pnpm not found. Run: corepack enable"; exit 1; }
 	@echo "✓ All prerequisites installed"
 
-# Initialize project: clone submodules and cache dependencies
-init:
+# Alias for backwards compatibility
+check-prereqs: check
+
+# Install dependencies (matches [install] in deepgram.toml)
+install:
 	@echo "==> Initializing submodules..."
 	git submodule update --init --recursive
 	@echo ""
@@ -42,12 +45,15 @@ init:
 	@echo "==> Installing frontend dependencies..."
 	cd frontend && corepack pnpm install
 	@echo ""
-	@echo "✓ Project initialized successfully!"
+	@echo "✓ Dependencies installed successfully!"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  1. Copy sample.env to .env and add your DEEPGRAM_API_KEY"
 	@echo "  2. Run 'make start' to start development servers"
 	@echo ""
+
+# Alias for backwards compatibility
+init: install
 
 # Build frontend for production
 build:

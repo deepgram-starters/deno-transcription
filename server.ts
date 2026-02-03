@@ -84,7 +84,7 @@ const deepgram = createClient(apiKey);
 
 interface TranscriptionRequest {
   url?: string;
-  buffer?: ArrayBuffer;
+  buffer?: Uint8Array;
   mimetype?: string;
 }
 
@@ -129,9 +129,10 @@ function validateTranscriptionInput(
     return { url };
   }
 
-  // File-based transcription
+  // File-based transcription - return empty object with mimetype
+  // Buffer will be populated later in the handler
   if (file) {
-    return { buffer: new ArrayBuffer(0), mimetype: file.type };
+    return { mimetype: file.type };
   }
 
   // Neither provided
@@ -158,9 +159,15 @@ async function transcribeAudio(
 
   // File transcription
   if (dgRequest.buffer) {
-    // Convert ArrayBuffer to Buffer for Deepgram SDK
-    const buffer = new Uint8Array(dgRequest.buffer);
-    return await deepgram.listen.prerecorded.transcribeFile(buffer as any, {
+    // Try using fileBlob if available, otherwise fall back to buffer
+    const fileData = (dgRequest as any).fileBlob || dgRequest.buffer;
+    console.log("Calling Deepgram transcribeFile with:", {
+      dataType: fileData.constructor.name,
+      size: dgRequest.buffer.length,
+      mimetype: dgRequest.mimetype
+    });
+
+    return await deepgram.listen.prerecorded.transcribeFile(fileData as any, {
       model,
       mimetype: dgRequest.mimetype,
     });
@@ -261,6 +268,11 @@ async function handleTranscription(req: Request): Promise<Response> {
     const url = formData.get("url") as string | null;
     const model = (formData.get("model") as string) || DEFAULT_MODEL;
 
+    console.log("=== Transcription Request ===");
+    console.log("Has file:", !!file, file ? `(name: ${file.name}, size: ${file.size}, type: ${file.type})` : "");
+    console.log("Has URL:", !!url, url || "");
+    console.log("Model:", model);
+
     // Validate input - must have either file or URL
     const dgRequest = validateTranscriptionInput(file, url);
     if (!dgRequest) {
@@ -271,19 +283,35 @@ async function handleTranscription(req: Request): Promise<Response> {
       );
     }
 
+    console.log("Validation passed, dgRequest:", { hasUrl: !!dgRequest.url, hasMimetype: !!dgRequest.mimetype, hasBuffer: !!dgRequest.buffer });
+
     // If file provided, read it into buffer
-    if (file && dgRequest.buffer !== undefined) {
-      dgRequest.buffer = await file.arrayBuffer();
+    if (file) {
+      const arrayBuffer = await file.arrayBuffer();
+      // Create a Blob instead of Uint8Array for better SDK compatibility
+      const blob = new Blob([arrayBuffer], { type: dgRequest.mimetype || file.type });
+      dgRequest.buffer = new Uint8Array(arrayBuffer);
+      console.log(`File read successfully: ${file.name}, buffer size: ${dgRequest.buffer.length} bytes, mimetype: ${dgRequest.mimetype}`);
+
+      // Store blob for SDK call
+      (dgRequest as any).fileBlob = blob;
     }
 
     // Send transcription request to Deepgram
     const transcriptionResponse = await transcribeAudio(dgRequest, model);
+
+    // Debug logging
+    console.log("Deepgram response structure:", JSON.stringify(transcriptionResponse, null, 2));
 
     // Format and return response
     const response = formatTranscriptionResponse(transcriptionResponse, model);
     return Response.json(response, { headers: getCorsHeaders() });
   } catch (err) {
     console.error("Transcription error:", err);
+    // Log more details about the error
+    if (err instanceof Error) {
+      console.error("Error stack:", err.stack);
+    }
     return formatErrorResponse(err as Error);
   }
 }
