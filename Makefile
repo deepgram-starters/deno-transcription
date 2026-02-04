@@ -1,7 +1,7 @@
 # Deno Transcription Makefile
 # Framework-agnostic commands for managing the project and git submodules
 
-.PHONY: help check check-prereqs install init build start start-backend start-frontend clean status update
+.PHONY: help check check-prereqs install init build start start-backend start-frontend test clean status update
 
 # Default target: show help
 help:
@@ -17,6 +17,9 @@ help:
 	@echo "  make start-backend  Start backend server only"
 	@echo "  make start-frontend Start frontend server only"
 	@echo "  make build          Build frontend for production"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test           Run contract conformance tests"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make update         Update submodules to latest commits"
@@ -86,6 +89,19 @@ start-frontend:
 	fi
 	@echo "==> Starting frontend on http://localhost:8080"
 	cd frontend && corepack pnpm run dev -- --port 8080 --no-open
+
+# Run contract conformance tests
+test:
+	@if [ ! -f ".env" ]; then \
+		echo "❌ Error: .env file not found. Copy sample.env to .env and add your DEEPGRAM_API_KEY"; \
+		exit 1; \
+	fi
+	@if [ ! -d "contracts" ] || [ -z "$$(ls -A contracts)" ]; then \
+		echo "❌ Error: Contracts submodule not initialized. Run 'make init' first."; \
+		exit 1; \
+	fi
+	@echo "==> Running contract conformance tests..."
+	@bash contracts/tests/run-transcription-app.sh
 
 # Update submodules to latest commits
 update:
