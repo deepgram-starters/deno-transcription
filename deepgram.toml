@@ -4,9 +4,10 @@ description = "Get started using Deepgram's Transcription with this Deno demo ap
 author = "Deepgram DX Team <devrel@deepgram.com> (https://developers.deepgram.com)"
 repository = "https://github.com/deepgram-starters/deno-transcription"
 useCase = "transcription"
-language = "TypeScript"
-framework = "Deno"
+language = "typescript"
+framework = "deno"
 sdk = "4.11.2"
+tags = ["transcription", "stt", "speech-to-text", "asr", "pre-recorded", "typescript", "deno"]
 
 [install.pre]
 command = "git submodule update --init --recursive"
