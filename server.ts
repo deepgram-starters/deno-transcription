@@ -6,7 +6,7 @@
  * modified and extended for your own projects.
  *
  * Key Features:
- * - Single API endpoint: POST /stt/transcribe
+ * - Single API endpoint: POST /api/transcription
  * - Accepts both file uploads and URLs
  * - CORS-enabled for frontend communication
  * - Native TypeScript support
@@ -38,13 +38,11 @@ const DEFAULT_MODEL = "nova-3";
 interface ServerConfig {
   port: number;
   host: string;
-  frontendPort: number;
 }
 
 const config: ServerConfig = {
   port: parseInt(Deno.env.get("PORT") || "8081"),
   host: Deno.env.get("HOST") || "0.0.0.0",
-  frontendPort: parseInt(Deno.env.get("FRONTEND_PORT") || "8080"),
 };
 
 // ============================================================================
@@ -223,10 +221,9 @@ function formatTranscriptionResponse(
  */
 function getCorsHeaders(): HeadersInit {
   return {
-    "Access-Control-Allow-Origin": `http://localhost:${config.frontendPort}`,
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Credentials": "true",
   };
 }
 
@@ -264,7 +261,7 @@ function formatErrorResponse(
 // ============================================================================
 
 /**
- * POST /stt/transcribe
+ * POST /api/transcription
  * Main transcription endpoint
  */
 async function handleTranscription(req: Request): Promise<Response> {
@@ -374,7 +371,7 @@ async function handleRequest(req: Request): Promise<Response> {
   }
 
   // API Routes
-  if (req.method === "POST" && url.pathname === "/stt/transcribe") {
+  if (req.method === "POST" && url.pathname === "/api/transcription") {
     return handleTranscription(req);
   }
 
@@ -395,8 +392,7 @@ async function handleRequest(req: Request): Promise<Response> {
 
 console.log("\n" + "=".repeat(70));
 console.log(`🚀 Backend API Server running at http://localhost:${config.port}`);
-console.log(`📡 CORS enabled for http://localhost:${config.frontendPort}`);
-console.log(`\n💡 Frontend should be running on http://localhost:${config.frontendPort}`);
+console.log(`📡 CORS enabled for wildcard origin`);
 console.log("=".repeat(70) + "\n");
 
 Deno.serve({ port: config.port, hostname: config.host }, handleRequest);
