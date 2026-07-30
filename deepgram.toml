@@ -6,7 +6,7 @@ repository = "https://github.com/deepgram-starters/deno-transcription"
 useCase = "transcription"
 language = "typescript"
 framework = "deno"
-sdk = "4.11.3"
+sdk = "5.7.0"
 tags = ["transcription", "stt", "speech-to-text", "asr", "pre-recorded", "typescript", "deno"]
 
 [install.pre]
