@@ -1,5 +1,6 @@
-import { assertEquals } from "jsr:@std/assert";
+import { assertEquals } from "@std/assert";
 import { Buffer } from "node:buffer";
+import type { DeepgramClient } from "@deepgram/sdk";
 import { transcribeAudio } from "../transcription.ts";
 
 Deno.test("preserves the uploaded MIME type for file transcription", async () => {
@@ -21,10 +22,13 @@ Deno.test("preserves the uploaded MIME type for file transcription", async () =>
 
   await transcribeAudio(
     { buffer: Buffer.from([0, 1, 2]), mimetype: "audio/wav" },
-    deepgram,
+    deepgram as Pick<DeepgramClient, "listen">,
     "nova-3",
   );
 
-  assertEquals(fileRequest, { data: Buffer.from([0, 1, 2]), contentType: "audio/wav" });
+  assertEquals(fileRequest, {
+    data: Buffer.from([0, 1, 2]),
+    contentType: "audio/wav",
+  });
   assertEquals(options, { model: "nova-3" });
 });
