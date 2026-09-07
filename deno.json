@@ -4,7 +4,7 @@
     "start": "deno run --allow-net --allow-read --allow-env server.ts",
     "check": "deno check server.ts",
     "cache": "deno cache server.ts",
-    "test": "deno test"
+    "test": "deno test tests"
   },
   "imports": {
     "@deepgram/sdk": "npm:@deepgram/sdk@^5.7.0",
