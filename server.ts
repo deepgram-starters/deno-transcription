@@ -14,7 +14,8 @@
  * - No external web framework needed
  */
 
-import { createClient } from "@deepgram/sdk";
+import { DeepgramClient } from "@deepgram/sdk";
+import { transcribeAudio, type TranscriptionRequest } from "./transcription.ts";
 import { load } from "dotenv";
 import TOML from "npm:@iarna/toml@2.2.5";
 import { Buffer } from "node:buffer";
@@ -117,17 +118,11 @@ const apiKey = loadApiKey();
 // SETUP - Initialize Deepgram client
 // ============================================================================
 
-const deepgram = createClient(apiKey);
+const deepgram = new DeepgramClient({ apiKey });
 
 // ============================================================================
 // TYPES - TypeScript interfaces for request/response
 // ============================================================================
-
-interface TranscriptionRequest {
-  url?: string;
-  buffer?: Buffer;
-  mimetype?: string;
-}
 
 interface ErrorResponse {
   error: {
@@ -181,35 +176,6 @@ function validateTranscriptionInput(
 }
 
 /**
- * Sends a transcription request to Deepgram
- * @param dgRequest - Request object with url OR buffer+mimetype
- * @param model - Model name to use (e.g., "nova-3")
- * @returns Deepgram API response
- */
-async function transcribeAudio(
-  dgRequest: TranscriptionRequest,
-  model: string = DEFAULT_MODEL
-): Promise<unknown> {
-  // URL transcription
-  if (dgRequest.url) {
-    return await deepgram.listen.prerecorded.transcribeUrl(
-      { url: dgRequest.url },
-      { model }
-    );
-  }
-
-  // File transcription
-  if (dgRequest.buffer) {
-    return await deepgram.listen.prerecorded.transcribeFile(dgRequest.buffer, {
-      model,
-      mimetype: dgRequest.mimetype,
-    });
-  }
-
-  throw new Error("Invalid transcription request");
-}
-
-/**
  * Formats Deepgram's response into a simplified, consistent structure
  * @param transcriptionResponse - Raw Deepgram API response
  * @param modelName - Name of model used for transcription
@@ -219,15 +185,9 @@ function formatTranscriptionResponse(
   transcriptionResponse: any,
   modelName: string
 ): TranscriptionResponse {
-  // Check for SDK-level errors first
-  if (transcriptionResponse.error) {
-    const error = transcriptionResponse.error;
-    throw new Error(
-      `Deepgram API error: ${error.message || JSON.stringify(error)}`
-    );
-  }
-
-  const transcription = transcriptionResponse.result;
+  // v5 returns the transcription result directly and throws on API errors
+  // (caught by the caller), so there is no { result, error } envelope to unwrap.
+  const transcription = transcriptionResponse;
 
   if (!transcription) {
     throw new Error("No result returned from Deepgram");
@@ -385,7 +345,7 @@ async function handleTranscription(req: Request): Promise<Response> {
     }
 
     // Send transcription request to Deepgram
-    const transcriptionResponse = await transcribeAudio(dgRequest, model);
+    const transcriptionResponse = await transcribeAudio(dgRequest, deepgram, model);
 
     // Format and return response
     const response = formatTranscriptionResponse(transcriptionResponse, model);
