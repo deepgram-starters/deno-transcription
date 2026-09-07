@@ -15,6 +15,7 @@
  */
 
 import { DeepgramClient } from "@deepgram/sdk";
+import { transcribeAudio, type TranscriptionRequest } from "./transcription.ts";
 import { load } from "dotenv";
 import TOML from "npm:@iarna/toml@2.2.5";
 import { Buffer } from "node:buffer";
@@ -123,12 +124,6 @@ const deepgram = new DeepgramClient({ apiKey });
 // TYPES - TypeScript interfaces for request/response
 // ============================================================================
 
-interface TranscriptionRequest {
-  url?: string;
-  buffer?: Buffer;
-  mimetype?: string;
-}
-
 interface ErrorResponse {
   error: {
     type: "ValidationError" | "TranscriptionError";
@@ -178,34 +173,6 @@ function validateTranscriptionInput(
 
   // Neither provided
   return null;
-}
-
-/**
- * Sends a transcription request to Deepgram
- * @param dgRequest - Request object with url OR buffer+mimetype
- * @param model - Model name to use (e.g., "nova-3")
- * @returns Deepgram API response
- */
-async function transcribeAudio(
-  dgRequest: TranscriptionRequest,
-  model: string = DEFAULT_MODEL
-): Promise<unknown> {
-  // URL transcription
-  if (dgRequest.url) {
-    return await deepgram.listen.v1.media.transcribeUrl({
-      url: dgRequest.url,
-      model,
-    });
-  }
-
-  // File transcription (Deepgram auto-detects the container/mimetype)
-  if (dgRequest.buffer) {
-    return await deepgram.listen.v1.media.transcribeFile(dgRequest.buffer, {
-      model,
-    });
-  }
-
-  throw new Error("Invalid transcription request");
 }
 
 /**
@@ -378,7 +345,7 @@ async function handleTranscription(req: Request): Promise<Response> {
     }
 
     // Send transcription request to Deepgram
-    const transcriptionResponse = await transcribeAudio(dgRequest, model);
+    const transcriptionResponse = await transcribeAudio(dgRequest, deepgram, model);
 
     // Format and return response
     const response = formatTranscriptionResponse(transcriptionResponse, model);
